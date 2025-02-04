@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
 import 'models/project.dart';
+import 'project_page.dart'; // Add this line
 
 class ProjectListPage extends StatefulWidget {
   const ProjectListPage({Key? key}) : super(key: key);

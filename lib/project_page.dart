@@ -1,7 +1,8 @@
+// lib/project_page.dart
 import 'package:flutter/material.dart';
-import 'package:hourtracker/database_helper.dart';
-import 'package:hourtracker/models/main_customer.dart';
-import 'package:hourtracker/models/project.dart';
+import 'database_helper.dart';
+import 'models/main_customer.dart';
+import 'models/project.dart';
 
 class ProjectPage extends StatefulWidget {
   const ProjectPage({Key? key}) : super(key: key);
@@ -9,6 +10,8 @@ class ProjectPage extends StatefulWidget {
   @override
   _ProjectPageState createState() => _ProjectPageState();
 }
+
+// ... rest of the code from the previous answer ...
 
 class _ProjectPageState extends State<ProjectPage> {
   final DatabaseHelper _dbHelper = DatabaseHelper();
