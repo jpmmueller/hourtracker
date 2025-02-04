@@ -1,11 +1,16 @@
-// lib/project_list_page.dart
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
+import 'models/main_customer.dart';
 import 'models/project.dart';
-import 'project_page.dart'; // Add this line
+import 'project_page.dart';
 
 class ProjectListPage extends StatefulWidget {
-  const ProjectListPage({Key? key}) : super(key: key);
+  final MainCustomer mainCustomer;
+
+  const ProjectListPage({
+    Key? key,
+    required this.mainCustomer,
+  }) : super(key: key);
 
   @override
   _ProjectListPageState createState() => _ProjectListPageState();
@@ -23,7 +28,12 @@ class _ProjectListPageState extends State<ProjectListPage> {
 
   Future<void> _loadProjects() async {
     final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query('projects');
+    final List<Map<String, dynamic>> maps = await db.query(
+      'projects',
+      where: 'main_customer_id = ?',
+      whereArgs: [widget.mainCustomer.id],
+    );
+
     setState(() {
       _projects = List.generate(maps.length, (i) {
         return Project(
@@ -42,12 +52,18 @@ class _ProjectListPageState extends State<ProjectListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Projects')),
+      appBar: AppBar(
+        title: Text('Projects for ${widget.mainCustomer.name}'),
+      ),
       body: ListView.builder(
         itemCount: _projects.length,
         itemBuilder: (context, index) {
           return ListTile(
             title: Text(_projects[index].name),
+            subtitle: Text(
+              'Setup: ${_projects[index].setupStartDate.toLocal().toString().split(' ')[0]}'
+              ' to ${_projects[index].setupEndDate.toLocal().toString().split(' ')[0]}',
+            ),
           );
         },
       ),
@@ -55,7 +71,11 @@ class _ProjectListPageState extends State<ProjectListPage> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const ProjectPage()),
+            MaterialPageRoute(
+              builder: (context) => ProjectPage(
+                mainCustomer: widget.mainCustomer,
+              ),
+            ),
           );
         },
         child: const Icon(Icons.add),

@@ -1,46 +1,27 @@
-// lib/project_page.dart
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
 import 'models/main_customer.dart';
 import 'models/project.dart';
 
 class ProjectPage extends StatefulWidget {
-  const ProjectPage({Key? key}) : super(key: key);
+  final MainCustomer mainCustomer;
+
+  const ProjectPage({
+    Key? key,
+    required this.mainCustomer,
+  }) : super(key: key);
 
   @override
   _ProjectPageState createState() => _ProjectPageState();
 }
 
-// ... rest of the code from the previous answer ...
-
 class _ProjectPageState extends State<ProjectPage> {
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final TextEditingController _projectNameController = TextEditingController();
-  List<MainCustomer> _mainCustomers = [];
-  MainCustomer? _selectedMainCustomer;
   DateTime? _setupStartDate;
   DateTime? _setupEndDate;
   DateTime? _dismantleStartDate;
   DateTime? _dismantleEndDate;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadMainCustomers();
-  }
-
-  Future<void> _loadMainCustomers() async {
-    final db = await _dbHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query('main_customers');
-    setState(() {
-      _mainCustomers = List.generate(maps.length, (i) {
-        return MainCustomer(
-          id: maps[i]['id'],
-          name: maps[i]['name'],
-        );
-      });
-    });
-  }
 
   Future<void> _pickDate(BuildContext context, bool isSetupStart) async {
     final DateTime? picked = await showDatePicker(
@@ -61,7 +42,9 @@ class _ProjectPageState extends State<ProjectPage> {
   }
 
   Future<void> _saveProject() async {
-    if (_projectNameController.text.isEmpty || _selectedMainCustomer == null) {
+    if (_projectNameController.text.isEmpty ||
+        _setupStartDate == null ||
+        _setupEndDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill all fields')),
       );
@@ -71,11 +54,11 @@ class _ProjectPageState extends State<ProjectPage> {
     final project = Project(
       id: DateTime.now().millisecondsSinceEpoch,
       name: _projectNameController.text,
-      mainCustomerId: _selectedMainCustomer!.id,
+      mainCustomerId: widget.mainCustomer.id,
       setupStartDate: _setupStartDate!,
       setupEndDate: _setupEndDate!,
-      dismantleStartDate: _dismantleStartDate!,
-      dismantleEndDate: _dismantleEndDate!,
+      dismantleStartDate: _dismantleStartDate ?? _setupEndDate!,
+      dismantleEndDate: _dismantleEndDate ?? _setupEndDate!,
     );
 
     final db = await _dbHelper.database;
@@ -89,7 +72,7 @@ class _ProjectPageState extends State<ProjectPage> {
       'dismantle_end_date': project.dismantleEndDate.toIso8601String(),
     });
 
-    Navigator.pop(context); // Return to the previous screen
+    Navigator.pop(context); // Return to ProjectListPage
   }
 
   @override
@@ -104,32 +87,23 @@ class _ProjectPageState extends State<ProjectPage> {
               controller: _projectNameController,
               decoration: const InputDecoration(labelText: 'Project Name'),
             ),
-            DropdownButton<MainCustomer>(
-              hint: const Text('Select Main Customer'),
-              value: _selectedMainCustomer,
-              items: _mainCustomers.map((customer) {
-                return DropdownMenuItem<MainCustomer>(
-                  value: customer,
-                  child: Text(customer.name),
-                );
-              }).toList(),
-              onChanged: (customer) {
-                setState(() => _selectedMainCustomer = customer);
-              },
-            ),
+            const SizedBox(height: 20),
             ListTile(
-              title: Text(_setupStartDate == null
-                  ? 'Select Setup Start Date'
-                  : 'Setup Start: ${_setupStartDate!.toLocal()}'),
-              onTap: () => _pickDate(context, true),
+              title: const Text('Setup Dates'),
+              subtitle: Text(
+                _setupStartDate == null || _setupEndDate == null
+                    ? 'Select dates'
+                    : '${_setupStartDate!.toLocal().toString().split(' ')[0]} '
+                        'to ${_setupEndDate!.toLocal().toString().split(' ')[0]}',
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.calendar_today),
+                onPressed: () async {
+                  await _pickDate(context, true); // Setup start
+                  await _pickDate(context, false); // Setup end
+                },
+              ),
             ),
-            ListTile(
-              title: Text(_setupEndDate == null
-                  ? 'Select Setup End Date'
-                  : 'Setup End: ${_setupEndDate!.toLocal()}'),
-              onTap: () => _pickDate(context, false),
-            ),
-            // Add similar fields for dismantle dates
             ElevatedButton(
               onPressed: _saveProject,
               child: const Text('Save Project'),
