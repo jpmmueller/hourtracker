@@ -1,7 +1,7 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'main_customer_page.dart'; // Ensure this import exists
-//import 'project_list_page.dart'; 
+import 'project_list_page.dart'; 
 
 void main() {
   runApp(const MyApp());
