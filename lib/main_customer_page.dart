@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart'; // Add this import
 import 'database_helper.dart';
-import 'models/main_customer.dart'; // Import the MainCustomer model
+import 'models/main_customer.dart';
+import 'project_list_page.dart';
 
 class MainCustomerPage extends StatefulWidget {
   const MainCustomerPage({Key? key}) : super(key: key);
@@ -38,25 +39,29 @@ class _MainCustomerPageState extends State<MainCustomerPage> {
   Future<void> _addMainCustomer() async {
     if (_nameController.text.isEmpty) return;
 
-    var mainCustomer = MainCustomer(
-      id: DateTime.now().millisecondsSinceEpoch,
-      name: _nameController.text,
-    );
+    try {
+      var mainCustomer = MainCustomer(
+        id: DateTime.now().millisecondsSinceEpoch,
+        name: _nameController.text,
+      );
 
-    final db = await _dbHelper.database;
-    await db.insert(
-      'main_customers',
-      {
-        'id': mainCustomer.id,
-        'name': mainCustomer.name,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+      final db = await _dbHelper.database;
+      await db.insert(
+        'main_customers',
+        {
+          'id': mainCustomer.id,
+          'name': mainCustomer.name,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
 
-    setState(() {
-      _mainCustomers.add(mainCustomer);
+      await _loadMainCustomers();
       _nameController.clear();
-    });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
   }
 
   @override
@@ -86,6 +91,16 @@ class _MainCustomerPageState extends State<MainCustomerPage> {
               itemBuilder: (context, index) {
                 return ListTile(
                   title: Text(_mainCustomers[index].name),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProjectListPage(
+                          mainCustomer: _mainCustomers[index],
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
