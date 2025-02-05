@@ -49,6 +49,19 @@ class _ProjectListPageState extends State<ProjectListPage> {
     });
   }
 
+  void _navigateToProjectPage() async {
+    final shouldRefresh = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProjectPage(mainCustomer: widget.mainCustomer),
+      ),
+    );
+
+    if (shouldRefresh == true) {
+      await _loadProjects();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -58,26 +71,20 @@ class _ProjectListPageState extends State<ProjectListPage> {
       body: ListView.builder(
         itemCount: _projects.length,
         itemBuilder: (context, index) {
+          final project = _projects[index];
           return ListTile(
-            title: Text(_projects[index].name),
+            title: Text(project.name),
             subtitle: Text(
-              'Setup: ${_projects[index].setupStartDate.toLocal().toString().split(' ')[0]}'
-              ' to ${_projects[index].setupEndDate.toLocal().toString().split(' ')[0]}',
+              'Setup: ${project.setupStartDate.toLocal().toString().split(' ')[0]} '
+              'to ${project.setupEndDate.toLocal().toString().split(' ')[0]}\n'
+              'Dismantle: ${project.dismantleStartDate.toLocal().toString().split(' ')[0]} '
+              'to ${project.dismantleEndDate.toLocal().toString().split(' ')[0]}',
             ),
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ProjectPage(
-                mainCustomer: widget.mainCustomer,
-              ),
-            ),
-          );
-        },
+        onPressed: _navigateToProjectPage,
         child: const Icon(Icons.add),
       ),
     );
