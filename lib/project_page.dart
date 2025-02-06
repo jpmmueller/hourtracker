@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Correct import for DateFormat
+import 'package:intl/intl.dart';
 import 'database_helper.dart';
 import 'models/main_customer.dart';
 import 'models/project.dart';
@@ -24,34 +24,26 @@ class _ProjectPageState extends State<ProjectPage> {
   DateTime? _dismantleStartDate;
   DateTime? _dismantleEndDate;
 
-  // Format dates (e.g., "2023-10-05")
   String _formatDate(DateTime? date) {
     return date != null ? DateFormat('yyyy-MM-dd').format(date) : 'Not set';
   }
 
-  Future<void> _pickDate(BuildContext context, String dateType) async {
-    final DateTime? picked = await showDatePicker(
+  Future<void> _pickDateRange(String dateType) async {
+    final result = await showDialog<List<DateTime>>(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+      builder: (context) => _DateRangePickerDialog(
+        label: dateType == 'setup' ? 'Setup' : 'Dismantle',
+      ),
     );
 
-    if (picked != null) {
+    if (result != null) {
       setState(() {
-        switch (dateType) {
-          case 'setupStart':
-            _setupStartDate = picked;
-            break;
-          case 'setupEnd':
-            _setupEndDate = picked;
-            break;
-          case 'dismantleStart':
-            _dismantleStartDate = picked;
-            break;
-          case 'dismantleEnd':
-            _dismantleEndDate = picked;
-            break;
+        if (dateType == 'setup') {
+          _setupStartDate = result[0];
+          _setupEndDate = result[1];
+        } else {
+          _dismantleStartDate = result[0];
+          _dismantleEndDate = result[1];
         }
       });
     }
@@ -66,6 +58,7 @@ class _ProjectPageState extends State<ProjectPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please fill all fields and select all dates.'),
+          duration: Duration(seconds: 2),
         ),
       );
       return;
@@ -93,7 +86,7 @@ class _ProjectPageState extends State<ProjectPage> {
         'dismantle_end_date': project.dismantleEndDate.toIso8601String(),
       });
 
-      Navigator.pop(context, true); // Pass "true" to trigger a refresh
+      Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error saving project: $e')),
@@ -104,44 +97,38 @@ class _ProjectPageState extends State<ProjectPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('New Project')),
+      appBar: AppBar(
+        title: const Text('New Project'),
+        elevation: 0,
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             TextField(
               controller: _projectNameController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Project Name',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
             const SizedBox(height: 20),
-            _buildDateSection(
-              'Setup Dates',
-              _setupStartDate,
-              _setupEndDate,
-              onStartPressed: () => _pickDate(context, 'setupStart'),
-              onEndPressed: () => _pickDate(context, 'setupEnd'),
-            ),
+            _buildDateSection('Setup Dates', _setupStartDate, _setupEndDate, 'setup'),
             const SizedBox(height: 20),
-            _buildDateSection(
-              'Dismantle Dates',
-              _dismantleStartDate,
-              _dismantleEndDate,
-              onStartPressed: () => _pickDate(context, 'dismantleStart'),
-              onEndPressed: () => _pickDate(context, 'dismantleEnd'),
-            ),
+            _buildDateSection('Dismantle Dates', _dismantleStartDate, _dismantleEndDate, 'dismantle'),
             const SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: _saveProject,
+            ElevatedButton.icon(
+              icon: const Icon(Icons.save),
+              label: const Text('Save Project', style: TextStyle(fontSize: 16)),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
-              child: const Text(
-                'Save Project',
-                style: TextStyle(fontSize: 16),
-              ),
+              onPressed: _saveProject,
             ),
           ],
         ),
@@ -149,48 +136,64 @@ class _ProjectPageState extends State<ProjectPage> {
     );
   }
 
-  Widget _buildDateSection(
-    String title,
-    DateTime? startDate,
-    DateTime? endDate, {
-    required VoidCallback onStartPressed,
-    required VoidCallback onEndPressed,
-  }) {
+  Widget _buildDateSection(String title, DateTime? startDate, DateTime? endDate, String dateType) {
     return Card(
-      elevation: 3,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.calendar_month, size: 20),
+                  onPressed: () => _pickDateRange(dateType),
+                ),
+              ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
-                  child: ListTile(
-                    title: const Text('Start Date'),
-                    subtitle: Text(_formatDate(startDate)),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.calendar_today),
-                      onPressed: onStartPressed,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Start Date',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      Text(
+                        _formatDate(startDate),
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ],
                   ),
                 ),
                 Expanded(
-                  child: ListTile(
-                    title: const Text('End Date'),
-                    subtitle: Text(_formatDate(endDate)),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.calendar_today),
-                      onPressed: onEndPressed,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'End Date',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      Text(
+                        _formatDate(endDate),
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -198,6 +201,117 @@ class _ProjectPageState extends State<ProjectPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _DateRangePickerDialog extends StatefulWidget {
+  final String label;
+
+  const _DateRangePickerDialog({required this.label});
+
+  @override
+  __DateRangePickerDialogState createState() => __DateRangePickerDialogState();
+}
+
+class __DateRangePickerDialogState extends State<_DateRangePickerDialog> {
+  DateTime? _startDate;
+  DateTime? _endDate;
+  String _currentStep = 'start';
+
+  Future<void> _selectDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _currentStep == 'start' 
+          ? _startDate ?? DateTime.now() 
+          : _endDate ?? (_startDate ?? DateTime.now()),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null) {
+      setState(() {
+        if (_currentStep == 'start') {
+          _startDate = picked;
+          _currentStep = 'end';
+        } else {
+          if (picked.isAfter(_startDate!)) {
+            _endDate = picked;
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('End date must be after start date'),
+                duration: Duration(seconds: 1),
+              ),
+            );
+          }
+        }
+      });
+    }
+  }
+
+  void _resetDates() {
+    setState(() {
+      _startDate = null;
+      _endDate = null;
+      _currentStep = 'start';
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('${widget.label} Dates'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            title: Text(_currentStep == 'start' 
+                ? 'Select Start Date' 
+                : 'Select End Date'),
+            trailing: IconButton(
+              icon: const Icon(Icons.calendar_today),
+              onPressed: _selectDate,
+            ),
+          ),
+          if (_startDate != null)
+            ListTile(
+              title: const Text('Selected Start Date'),
+              subtitle: Text(DateFormat('yyyy-MM-dd').format(_startDate!)),
+            ),
+          if (_endDate != null)
+            ListTile(
+              title: const Text('Selected End Date'),
+              subtitle: Text(DateFormat('yyyy-MM-dd').format(_endDate!)),
+            ),
+          if (_startDate != null || _endDate != null)
+            TextButton(
+              onPressed: _resetDates,
+              child: const Text('Reset Dates'),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () {
+            if (_startDate != null && _endDate != null) {
+              Navigator.pop(context, [_startDate, _endDate]);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Please select both dates'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            }
+          },
+          child: const Text('Save'),
+        ),
+      ],
     );
   }
 }
